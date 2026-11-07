@@ -6,7 +6,7 @@ import pytest
 
 from indexing_search import (INDEXES, compare_indexes, create_indexes,
                              drop_indexes, fts_count, full_text_search,
-                             generate_books, like_count, normalize,
+                             generate_books, like_count, main, normalize,
                              query_plan, sample_queries)
 
 
@@ -155,3 +155,19 @@ def test_fts_bad_query(fts):
     """Синтаксически неверный запрос FTS5 вызывает OperationalError."""
     with pytest.raises(sqlite3.OperationalError):
         fts_count(fts, "AND")
+
+
+@pytest.mark.parametrize("argument", ["0", "-5", "abc", "1.5"])
+def test_main_rejects_bad_size(capsys, argument):
+    """Неверный размер каталога — сообщение, а не падение программы."""
+    main([argument])
+    assert "целым положительным" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize("size", ["1", "300"])
+def test_main_small_catalog(capsys, size):
+    """Демонстрация работает и на очень маленьком каталоге."""
+    main([size])
+    output = capsys.readouterr().out
+    assert "USING INDEX idx_catalog_isbn" in output
+    assert "LIKE '%мир%' против FTS5" in output

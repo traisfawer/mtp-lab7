@@ -233,7 +233,9 @@ def main(argv=None):
     try:
         size = int(args[0]) if args else DEFAULT_SIZE
     except ValueError:
-        print("Размер каталога должен быть целым числом")
+        size = 0
+    if size < 1:
+        print("Размер каталога должен быть целым положительным числом")
         return
     conn = connect(":memory:")
     start = time.perf_counter()
@@ -276,14 +278,14 @@ def main(argv=None):
     fts_ms = best_time_ms(
         conn, "SELECT rowid FROM catalog_fts WHERE catalog_fts MATCH 'мир'",
         repeat=3)
+    like_found, fts_found = like_count(conn, "мир"), fts_count(conn, "мир")
     print("\n== LIKE '%мир%' против FTS5 'мир' ==")
     print(format_table(
-        [("LIKE (подстрока, полный перебор)", like_count(conn, "мир"),
-          f"{like_ms:.1f}"),
-         ("FTS5 (целое слово, индекс)", fts_count(conn, "мир"),
-          f"{fts_ms:.1f}")],
+        [("LIKE (подстрока, полный перебор)", like_found, f"{like_ms:.1f}"),
+         ("FTS5 (целое слово, индекс)", fts_found, f"{fts_ms:.1f}")],
         ["Способ", "Найдено", "Время, мс"]))
-    print("LIKE находит больше: в его результат попадают «Мирный ...».")
+    if like_found > fts_found:
+        print("LIKE находит больше: в его результат попадают «Мирный ...».")
     conn.close()
 
 
