@@ -197,7 +197,7 @@ def build_fts(conn):
 
 
 def full_text_search(conn, query, limit=10):
-    """Найти книги по запросу FTS5; совпадения в названии важнее (×10).
+    """Найти книги по запросу FTS5; слово в названии весит в 10 раз больше.
 
     В поле fragment найденные слова выделены квадратными скобками.
     """
@@ -227,6 +227,14 @@ def like_count(conn, text):
         (f"%{text.lower()}%",)).fetchone()[0]
 
 
+def speedup_text(before, after):
+    """Ускорение словами: «в 34 раза», «в 2050 раз»."""
+    times = round(before / max(after, 1e-6))
+    word = "раза" if times % 10 in (2, 3, 4) and \
+        times % 100 not in (12, 13, 14) else "раз"
+    return f"в {times} {word}"
+
+
 def main(argv=None):
     """Построить каталог и показать работу индексов и поиска."""
     args = sys.argv[1:] if argv is None else argv
@@ -248,7 +256,7 @@ def main(argv=None):
     print("\n== Запросы без индексов и с индексами ==")
     print(format_table(
         [(r["name"], f"{r['ms_before']:.2f}", f"{r['ms_after']:.3f}",
-          f"×{r['ms_before'] / max(r['ms_after'], 1e-6):.0f}")
+          speedup_text(r["ms_before"], r["ms_after"]))
          for r in results],
         ["Запрос", "Без индекса, мс", "С индексом, мс", "Ускорение"]))
     print("\n== План выполнения (EXPLAIN QUERY PLAN) ==")

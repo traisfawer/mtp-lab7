@@ -7,7 +7,8 @@ import pytest
 from indexing_search import (INDEXES, compare_indexes, create_indexes,
                              drop_indexes, fts_count, full_text_search,
                              generate_books, like_count, main, normalize,
-                             query_plan, sample_queries)
+                             query_plan, sample_queries,
+                             speedup_text)
 
 
 def plan_text(conn, sql, params=()):
@@ -171,3 +172,18 @@ def test_main_small_catalog(capsys, size):
     output = capsys.readouterr().out
     assert "USING INDEX idx_catalog_isbn" in output
     assert "LIKE '%мир%' против FTS5" in output
+
+
+def test_main_output_fits_windows_encoding(capsys):
+    """Вывод можно перенаправить в файл в кодировке Windows (cp1251)."""
+    main(["300"])
+    capsys.readouterr().out.encode("cp1251")
+
+
+@pytest.mark.parametrize("before, after, text", [
+    (34, 1, "в 34 раза"), (50, 1, "в 50 раз"), (12, 1, "в 12 раз"),
+    (2050, 1, "в 2050 раз"), (1, 1, "в 1 раз"), (122, 1, "в 122 раза"),
+])
+def test_speedup_text(before, after, text):
+    """Слово «раз» согласуется с числом."""
+    assert speedup_text(before, after) == text
